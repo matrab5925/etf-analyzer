@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETF Distribution Analyzer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .input-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            align-items: end;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: #34495e;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .input-group input, .input-group select {
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .analyze-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .analyze-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 5px solid #667eea;
+        }
+
+        .summary-card h3 {
+            color: #34495e;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .summary-card .value {
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .summary-card .change {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .signal-strong-buy { color: #27ae60; }
+        .signal-buy { color: #2ecc71; }
+        .signal-hold { color: #f39c12; }
+        .signal-sell { color: #e74c3c; }
+        .signal-strong-sell { color: #c0392b; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-card h4 {
+            color: #34495e;
+            font-size: 12px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card .stat-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .zones-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .zones-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .zone-card {
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+            color: white;
+        }
+
+        .zone-strong-sell { background: linear-gradient(45deg, #c0392b, #e74c3c); }
+        .zone-sell { background: linear-gradient(45deg, #e74c3c, #ec7063); }
+        .zone-hold { background: linear-gradient(45deg, #f39c12, #f7dc6f); color: #2c3e50; }
+        .zone-buy { background: linear-gradient(45deg, #2ecc71, #58d68d); }
+        .zone-strong-buy { background: linear-gradient(45deg, #27ae60, #2ecc71); }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .chart-card h3 {
+            color: #34495e;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.2em;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .signals-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .signals-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .signals-table th, .signals-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .signals-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #34495e;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+
+        .signals-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .upload-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 2px dashed #bdc3c7;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fadbd8;
+            color: #c0392b;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .input-section {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+
+            .zones-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 ETF Distribution Analyzer</h1>
+            <p>정규분포 기반 ETF 매매 신호 분석 대시보드</p>
+        </div>
+
+        <div class="input-section">
+            <div class="input-group">
+                <label for="ticker">ETF 티커</label>
+                <input type="text" id="ticker" placeholder="예: SOXL, QQQ, SPY" value="QQQ">
+            </div>
+            <div class="input-group">
+                <label for="period">분석 기간</label>
+                <select id="period">
+                    <option value="6m">6개월</option>
+                    <option value="1y" selected>1년</option>
+                    <option value="2y">2년</option>
+                    <option value="10y">10년</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <button id="analyzeBtn" class="analyze-btn">분석 시작</button>
+            </div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>데이터를 분석하는 중입니다...</p>
+        </div>
+
+        <div id="results" style="display: none;">
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <h3>현재가</h3>
+                    <div class="value" id="currentPrice">$0.00</div>
+                </div>
+                <div class="summary-card">
+                    <h3>당일 변동률</h3>
+                    <div class="value" id="dailyChange">0.00%</div>
+                </div>
+                <div class="summary-card">
+                    <h3>당일 Z-Score</h3>
+                    <div class="value" id="currentZScore">0.00</div>
+                </div>
+                <div class="summary-card">
+                    <h3>투자 판단</h3>
+                    <div class="value" id="investmentSignal">분석 중</div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h4>평균 로그수익률</h4>
+                    <div class="stat-value" id="avgLogReturn">0.00%</div>
+                </div>
+                <div class="stat-card">
+                    <h4>로그수익률 표준편차</h4>
+                    <div class="stat-value" id="logReturnStd">0.00%</div>
+                </div>
+                <div class="stat-card">
+                    <h4>연환산 변동성</h4>
+                    <div class="stat-value" id="annualizedVol">0.00%</div>
+                </div>
+                <div class="stat-card">
+                    <h4>샤프 비율</h4>
+                    <div class="stat-value" id="sharpeRatio">0.00</div>
+                </div>
+            </div>
+
+            <div class="zones-container">
+                <h3 style="text-align: center; margin-bottom: 20px; color: #34495e;">매매 구간 (-2σ ~ +2σ)</h3>
+                <div class="zones-grid">
+                    <div class="zone-card zone-strong-sell">
+                        <div>강력 매도</div>
+                        <div id="zone-2sigma">-2σ</div>
+                    </div>
+                    <div class="zone-card zone-sell">
+                        <div>매도</div>
+                        <div id="zone-1sigma">-1σ</div>
+                    </div>
+                    <div class="zone-card zone-hold">
+                        <div>보류</div>
+                        <div>평균</div>
+                    </div>
+                    <div class="zone-card zone-buy">
+                        <div>매수</div>
+                        <div id="zone1sigma">+1σ</div>
+                    </div>
+                    <div class="zone-card zone-strong-buy">
+                        <div>강력 매수</div>
+                        <div id="zone2sigma">+2σ</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-container">
+                <div class="chart-card">
+                    <h3>📈 가격 차트 및 매매 신호</h3>
+                    <div class="chart-container">
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <h3>📊 로그수익률 히스토그램</h3>
+                    <div class="chart-container">
+                        <canvas id="histogramChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <h3>📉 Z-Score 시계열</h3>
+                    <div class="chart-container">
+                        <canvas id="zscoreChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="signals-container">
+                <h3 style="color: #34495e;">🔔 최근 매매 신호 (최근 10개)</h3>
+                <table class="signals-table">
+                    <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>가격</th>
+                            <th>Z-Score</th>
+                            <th>신호</th>
+                        </tr>
+                    </thead>
+                    <tbody id="signalsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="upload-section">
+            <h3 style="color: #34495e; margin-bottom: 15px;">📁 CSV 파일 업로드</h3>
+            <p style="color: #7f8c8d; margin-bottom: 20px;">형식: Date,Close (날짜,종가)</p>
+            <div class="upload-area" id="uploadArea">
+                <div>
+                    <strong>파일을 여기에 드래그하거나 클릭하여 선택하세요</strong>
+                    <p style="color: #7f8c8d; margin-top: 10px;">CSV 파일만 지원됩니다</p>
+                </div>
+                <input type="file" id="csvFile" accept=".csv" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ETFAnalyzer {
+            constructor() {
+                this.data = null;
+                this.charts = {};
+                this.initEventListeners();
+            }
+
+            initEventListeners() {
+                document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeETF());
+                document.getElementById('ticker').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.analyzeETF();
+                });
+                
+                // File upload
+                const uploadArea = document.getElementById('uploadArea');
+                const csvFile = document.getElementById('csvFile');
+                
+                uploadArea.addEventListener('click', () => csvFile.click());
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('dragover');
+                });
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    const files = e.dataTransfer.files;
+                    if (files[0]) this.handleCSVUpload(files[0]);
+                });
+                csvFile.addEventListener('change', (e) => {
+                    if (e.target.files[0]) this.handleCSVUpload(e.target.files[0]);
+                });
+            }
+
+            async analyzeETF() {
+                const ticker = document.getElementById('ticker').value.toUpperCase().trim();
+                const period = document.getElementById('period').value;
+                
+                if (!ticker) {
+                    this.showError('티커를 입력해주세요.');
+                    return;
+                }
+
+                this.showLoading(true);
+                this.hideError();
+
+                try {
+                    // Generate synthetic ETF data for demonstration
+                    const data = this.generateSyntheticData(ticker, period);
+                    this.data = data;
+                    this.performAnalysis();
+                    this.updateDisplay();
+                    this.showResults(true);
+                } catch (error) {
+                    this.showError('데이터 분석 중 오류가 발생했습니다: ' + error.message);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            generateSyntheticData(ticker, period) {
+                const periods = { '6m': 126, '1y': 252, '2y': 504, '10y': 2520 };
+                const days = periods[period];
+                
+                const data = [];
+                let price = 100;
+                const baseDate = new Date();
+                baseDate.setDate(baseDate.getDate() - days);
+                
+                // Different volatility patterns for different ETFs
+                const volatilityMap = {
+                    'SOXL': 0.045, 'QQQ': 0.025, 'SPY': 0.015, 
+                    'TQQQ': 0.055, 'NVDA': 0.035, 'MSFT': 0.020
+                };
+                const volatility = volatilityMap[ticker] || 0.025;
+                
+                for (let i = 0; i < days; i++) {
+                    const date = new Date(baseDate);
+                    date.setDate(date.getDate() + i);
+                    
+                    // Generate realistic price movement with long-term trend
+                    let trendComponent = 0;
+                    if (period === '10y') {
+                        // Add slight upward trend for long-term analysis
+                        trendComponent = 0.0001 * (i / days);
+                    }
+                    
+                    const randomReturn = (Math.random() - 0.5) * 2 * volatility + trendComponent;
+                    price *= Math.exp(randomReturn);
+                    
+                    data.push({
+                        date: date.toISOString().split('T')[0],
+                        close: parseFloat(price.toFixed(2))
+                    });
+                }
+                
+                return data;
+            }
+
+            performAnalysis() {
+                if (!this.data || this.data.length < 2) return;
+
+                const prices = this.data.map(d => d.close);
+                const logReturns = [];
+                
+                for (let i = 1; i < prices.length; i++) {
+                    logReturns.push(Math.log(prices[i] / prices[i - 1]));
+                }
+
+                // Calculate statistics
+                const mean = logReturns.reduce((sum, val) => sum + val, 0) / logReturns.length;
+                const variance = logReturns.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / logReturns.length;
+                const std = Math.sqrt(variance);
+                
+                this.stats = {
+                    avgLogReturn: mean,
+                    logReturnStd: std,
+                    annualizedVol: std * Math.sqrt(252),
+                    sharpeRatio: (mean * 252) / (std * Math.sqrt(252)),
+                    logReturns: logReturns,
+                    currentPrice: prices[prices.length - 1],
+                    previousPrice: prices[prices.length - 2],
+                    currentReturn: Math.log(prices[prices.length - 1] / prices[prices.length - 2]),
+                    zones: {
+                        strongSell: mean - 2 * std,
+                        sell: mean - std,
+                        hold: mean,
+                        buy: mean + std,
+                        strongBuy: mean + 2 * std
+                    }
+                };
+
+                // Calculate Z-scores
+                this.data.forEach((item, index) => {
+                    if (index > 0) {
+                        const logReturn = Math.log(item.close / this.data[index - 1].close);
+                        item.zScore = (logReturn - mean) / std;
+                        item.signal = this.getSignal(item.zScore);
+                    }
+                });
+            }
+
+            getSignal(zScore) {
+                if (zScore <= -2) return { text: '강력매수', class: 'signal-strong-buy' };
+                if (zScore <= -1) return { text: '매수', class: 'signal-buy' };
+                if (zScore >= 2) return { text: '강력매도', class: 'signal-strong-sell' };
+                if (zScore >= 1) return { text: '매도', class: 'signal-sell' };
+                return { text: '보류', class: 'signal-hold' };
+            }
+
+            updateDisplay() {
+                if (!this.stats) return;
+
+                // Update summary
+                document.getElementById('currentPrice').textContent = `$${this.stats.currentPrice.toFixed(2)}`;
+                const dailyChangePercent = ((this.stats.currentPrice - this.stats.previousPrice) / this.stats.previousPrice) * 100;
+                document.getElementById('dailyChange').textContent = `${dailyChangePercent >= 0 ? '+' : ''}${dailyChangePercent.toFixed(2)}%`;
+                document.getElementById('dailyChange').style.color = dailyChangePercent >= 0 ? '#27ae60' : '#e74c3c';
+                
+                const currentZScore = this.stats.currentReturn / this.stats.logReturnStd;
+                document.getElementById('currentZScore').textContent = currentZScore.toFixed(2);
+                
+                const currentSignal = this.getSignal(currentZScore);
+                const signalElement = document.getElementById('investmentSignal');
+                signalElement.textContent = currentSignal.text;
+                signalElement.className = `value ${currentSignal.class}`;
+
+                // Update statistics
+                document.getElementById('avgLogReturn').textContent = `${(this.stats.avgLogReturn * 100).toFixed(4)}%`;
+                document.getElementById('logReturnStd').textContent = `${(this.stats.logReturnStd * 100).toFixed(4)}%`;
+                document.getElementById('annualizedVol').textContent = `${(this.stats.annualizedVol * 100).toFixed(2)}%`;
+                document.getElementById('sharpeRatio').textContent = this.stats.sharpeRatio.toFixed(3);
+
+                // Update zones
+                document.getElementById('zone-2sigma').textContent = `${(this.stats.zones.strongSell * 100).toFixed(2)}%`;
+                document.getElementById('zone-1sigma').textContent = `${(this.stats.zones.sell * 100).toFixed(2)}%`;
+                document.getElementById('zone1sigma').textContent = `${(this.stats.zones.buy * 100).toFixed(2)}%`;
+                document.getElementById('zone2sigma').textContent = `${(this.stats.zones.strongBuy * 100).toFixed(2)}%`;
+
+                // Update signals table
+                this.updateSignalsTable();
+                
+                // Update charts
+                this.updateCharts();
+            }
+
+            updateSignalsTable() {
+                const tbody = document.getElementById('signalsTableBody');
+                tbody.innerHTML = '';
+                
+                const recentData = this.data.slice(-10).reverse();
+                
+                recentData.forEach(item => {
+                    if (item.zScore !== undefined) {
+                        const row = tbody.insertRow();
+                        row.innerHTML = `
+                            <td>${item.date}</td>
+                            <td>$${item.close.toFixed(2)}</td>
+                            <td>${item.zScore.toFixed(3)}</td>
+                            <td><span class="${item.signal.class}">${item.signal.text}</span></td>
+                        `;
+                    }
+                });
+            }
+
+            updateCharts() {
+                this.updatePriceChart();
+                this.updateHistogramChart();
+                this.updateZScoreChart();
+            }
+
+            updatePriceChart() {
+                const ctx = document.getElementById('priceChart').getContext('2d');
+                
+                if (this.charts.price) {
+                    this.charts.price.destroy();
+                }
+
+                const labels = this.data.map(d => d.date);
+                const prices = this.data.map(d => d.close);
+                
+                // Generate buy/sell signals
+                const buySignals = this.data.filter(d => d.signal && (d.signal.class === 'signal-buy' || d.signal.class === 'signal-strong-buy'))
+                    .map(d => ({ x: d.date, y: d.close }));
+                const sellSignals = this.data.filter(d => d.signal && (d.signal.class === 'signal-sell' || d.signal.class === 'signal-strong-sell'))
+                    .map(d => ({ x: d.date, y: d.close }));
+
+                this.charts.price = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '가격',
+                            data: prices,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1
+                        }, {
+                            label: '매수 신호',
+                            data: buySignals,
+                            backgroundColor: '#27ae60',
+                            borderColor: '#27ae60',
+                            type: 'scatter',
+                            pointRadius: 6,
+                            pointHoverRadius: 8
+                        }, {
+                            label: '매도 신호',
+                            data: sellSignals,
+                            backgroundColor: '#e74c3c',
+                            borderColor: '#e74c3c',
+                            type: 'scatter',
+                            pointRadius: 6,
+                            pointHoverRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    parser: 'YYYY-MM-DD',
+                                    displayFormats: {
+                                        day: 'MM/DD',
+                                        month: 'MM/YY'
+                                    }
+                                }
+                            },
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Price ($)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            updateHistogramChart() {
+                const ctx = document.getElementById('histogramChart').getContext('2d');
+                
+                if (this.charts.histogram) {
+                    this.charts.histogram.destroy();
+                }
+
+                // Create histogram bins
+                const returns = this.stats.logReturns;
+                const binCount = 30;
+                const minReturn = Math.min(...returns);
+                const maxReturn = Math.max(...returns);
+                const binWidth = (maxReturn - minReturn) / binCount;
+                
+                const bins = new Array(binCount).fill(0);
+                const binLabels = [];
+                
+                for (let i = 0; i < binCount; i++) {
+                    const binStart = minReturn + i * binWidth;
+                    const binEnd = binStart + binWidth;
+                    binLabels.push(((binStart + binEnd) / 2 * 100).toFixed(2));
+                    
+                    returns.forEach(ret => {
+                        if (ret >= binStart && ret < binEnd) {
+                            bins[i]++;
+                        }
+                    });
+                }
+
+                // Generate normal distribution curve
+                const normalCurve = [];
+                const mean = this.stats.avgLogReturn;
+                const std = this.stats.logReturnStd;
+                
+                for (let i = 0; i < binCount; i++) {
+                    const x = minReturn + (i + 0.5) * binWidth;
+                    const y = returns.length * binWidth * (1 / (std * Math.sqrt(2 * Math.PI))) * 
+                             Math.exp(-0.5 * Math.pow((x - mean) / std, 2));
+                    normalCurve.push(y);
+                }
+
+                this.charts.histogram = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: binLabels,
+                        datasets: [{
+                            label: '실제 분포',
+                            data: bins,
+                            backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                            borderColor: '#667eea',
+                            borderWidth: 1
+                        }, {
+                            label: '정규분포',
+                            data: normalCurve,
+                            type: 'line',
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: '로그수익률 (%)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: '빈도'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            updateZScoreChart() {
+                const ctx = document.getElementById('zscoreChart').getContext('2d');
+                
+                if (this.charts.zscore) {
+                    this.charts.zscore.destroy();
+                }
+
+                const labels = this.data.slice(1).map(d => d.date);
+                const zScores = this.data.slice(1).map(d => d.zScore);
+
+                this.charts.zscore = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Z-Score',
+                            data: zScores,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    parser: 'YYYY-MM-DD',
+                                    displayFormats: {
+                                        day: 'MM/DD',
+                                        month: 'MM/YY'
+                                    }
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Z-Score'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true
+                            },
+                            annotation: {
+                                annotations: {
+                                    line1: {
+                                        type: 'line',
+                                        yMin: 2,
+                                        yMax: 2,
+                                        borderColor: '#e74c3c',
+                                        borderWidth: 2,
+                                        borderDash: [5, 5],
+                                        label: {
+                                            content: '+2σ (강력매도)',
+                                            enabled: true,
+                                            position: 'end'
+                                        }
+                                    },
+                                    line2: {
+                                        type: 'line',
+                                        yMin: 1,
+                                        yMax: 1,
+                                        borderColor: '#f39c12',
+                                        borderWidth: 2,
+                                        borderDash: [5, 5],
+                                        label: {
+                                            content: '+1σ (매도)',
+                                            enabled: true,
+                                            position: 'end'
+                                        }
+                                    },
+                                    line3: {
+                                        type: 'line',
+                                        yMin: 0,
+                                        yMax: 0,
+                                        borderColor: '#95a5a6',
+                                        borderWidth: 1,
+                                        borderDash: [3, 3]
+                                    },
+                                    line4: {
+                                        type: 'line',
+                                        yMin: -1,
+                                        yMax: -1,
+                                        borderColor: '#2ecc71',
+                                        borderWidth: 2,
+                                        borderDash: [5, 5],
+                                        label: {
+                                            content: '-1σ (매수)',
+                                            enabled: true,
+                                            position: 'end'
+                                        }
+                                    },
+                                    line5: {
+                                        type: 'line',
+                                        yMin: -2,
+                                        yMax: -2,
+                                        borderColor: '#27ae60',
+                                        borderWidth: 2,
+                                        borderDash: [5, 5],
+                                        label: {
+                                            content: '-2σ (강력매수)',
+                                            enabled: true,
+                                            position: 'end'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            async handleCSVUpload(file) {
+                if (!file.name.endsWith('.csv')) {
+                    this.showError('CSV 파일만 업로드 가능합니다.');
+                    return;
+                }
+
+                this.showLoading(true);
+                this.hideError();
+
+                try {
+                    const text = await file.text();
+                    const lines = text.trim().split('\n');
+                    const data = [];
+
+                    // Skip header row
+                    for (let i = 1; i < lines.length; i++) {
+                        const [date, close] = lines[i].split(',');
+                        if (date && close && !isNaN(parseFloat(close))) {
+                            data.push({
+                                date: date.trim(),
+                                close: parseFloat(close)
+                            });
+                        }
+                    }
+
+                    if (data.length < 10) {
+                        throw new Error('최소 10개의 데이터 포인트가 필요합니다.');
+                    }
+
+                    // Sort by date
+                    data.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    this.data = data;
+                    this.performAnalysis();
+                    this.updateDisplay();
+                    this.showResults(true);
+
+                    // Update ticker field with "Custom Data"
+                    document.getElementById('ticker').value = 'CUSTOM';
+
+                } catch (error) {
+                    this.showError('CSV 파일 처리 중 오류가 발생했습니다: ' + error.message);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            showLoading(show) {
+                document.getElementById('loading').style.display = show ? 'block' : 'none';
+                document.getElementById('analyzeBtn').disabled = show;
+            }
+
+            showResults(show) {
+                document.getElementById('results').style.display = show ? 'block' : 'none';
+            }
+
+            showError(message) {
+                const errorElement = document.getElementById('errorMessage');
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+            }
+
+            hideError() {
+                document.getElementById('errorMessage').style.display = 'none';
+            }
+        }
+
+        // Initialize the analyzer when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ETFAnalyzer();
+        });
+    </script>
+</body>
+</html>
