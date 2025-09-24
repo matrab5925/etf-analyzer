@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ETF Distribution Analyzer</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <!-- Chart.js 라이브러리 로드 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -583,10 +585,13 @@
     <script>
         class ETFAnalyzer {
             constructor() {
+                console.log('ETFAnalyzer constructor called');
                 this.data = null;
                 this.charts = {};
                 this.etfDatabase = this.initializeETFDatabase();
                 this.initEventListeners();
+                window.etfAnalyzerInitialized = true;
+                console.log('ETFAnalyzer initialization complete');
             }
 
             initializeETFDatabase() {
@@ -659,15 +664,37 @@
             }
 
             initEventListeners() {
-                document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeETF());
-                document.getElementById('ticker').addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') this.analyzeETF();
+                console.log('Setting up event listeners...');
+                
+                const analyzeBtn = document.getElementById('analyzeBtn');
+                const tickerInput = document.getElementById('ticker');
+                
+                if (!analyzeBtn || !tickerInput) {
+                    console.error('Required elements not found');
+                    return;
+                }
+
+                analyzeBtn.addEventListener('click', () => {
+                    console.log('Analyze button clicked');
+                    this.analyzeETF();
+                });
+                
+                tickerInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        console.log('Enter key pressed in ticker input');
+                        this.analyzeETF();
+                    }
                 });
 
                 // Ticker suggestions
-                document.querySelectorAll('.ticker-tag').forEach(tag => {
+                const tickerTags = document.querySelectorAll('.ticker-tag');
+                console.log('Found ticker tags:', tickerTags.length);
+                
+                tickerTags.forEach(tag => {
                     tag.addEventListener('click', () => {
-                        document.getElementById('ticker').value = tag.dataset.ticker;
+                        const ticker = tag.dataset.ticker;
+                        console.log('Ticker tag clicked:', ticker);
+                        document.getElementById('ticker').value = ticker;
                         // Add visual feedback
                         tag.style.background = '#667eea';
                         tag.style.color = 'white';
@@ -679,8 +706,18 @@
                 });
                 
                 // File upload
+                this.setupFileUpload();
+                console.log('Event listeners setup complete');
+            }
+
+            setupFileUpload() {
                 const uploadArea = document.getElementById('uploadArea');
                 const csvFile = document.getElementById('csvFile');
+                
+                if (!uploadArea || !csvFile) {
+                    console.warn('Upload elements not found');
+                    return;
+                }
                 
                 uploadArea.addEventListener('click', () => csvFile.click());
                 uploadArea.addEventListener('dragover', (e) => {
@@ -702,8 +739,21 @@
             }
 
             async analyzeETF() {
-                const ticker = document.getElementById('ticker').value.toUpperCase().trim();
-                const period = document.getElementById('period').value;
+                console.log('analyzeETF called');
+                
+                const tickerElement = document.getElementById('ticker');
+                const periodElement = document.getElementById('period');
+                
+                if (!tickerElement || !periodElement) {
+                    console.error('Required input elements not found');
+                    this.showError('입력 요소를 찾을 수 없습니다. 페이지를 새로고침해주세요.');
+                    return;
+                }
+                
+                const ticker = tickerElement.value.toUpperCase().trim();
+                const period = periodElement.value;
+                
+                console.log('Analyzing:', ticker, period);
                 
                 if (!ticker) {
                     this.showError('ETF 티커를 입력해주세요.');
@@ -714,19 +764,29 @@
                 this.hideMessages();
 
                 try {
+                    console.log('Generating realistic ETF data...');
                     // Generate realistic ETF data based on characteristics
                     const data = this.generateRealisticETFData(ticker, period);
+                    console.log('Data generated:', data.length, 'points');
+                    
                     this.data = data;
                     this.currentTicker = ticker;
                     
                     // Add processing delay for realistic feel
                     await this.sleep(1500);
                     
+                    console.log('Performing analysis...');
                     this.performAnalysis();
+                    
+                    console.log('Updating display...');
                     this.updateDisplay();
+                    
                     this.showResults(true);
                     this.showSuccess(`${ticker} ETF 분석 완료! ${data.length}개 데이터 포인트 분석됨`);
+                    console.log('Analysis complete');
+                    
                 } catch (error) {
+                    console.error('Analysis error:', error);
                     this.showError('데이터 분석 중 오류가 발생했습니다: ' + error.message);
                 } finally {
                     this.showLoading(false);
@@ -1366,8 +1426,39 @@
         }
 
         // Initialize the analyzer when the page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            new ETFAnalyzer();
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing ETF Analyzer...');
+            
+            // Check if Chart.js is loaded
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js is not loaded');
+                alert('차트 라이브러리 로딩 실패. 페이지를 새로고침해주세요.');
+                return;
+            }
+            
+            console.log('Chart.js loaded successfully');
+            
+            try {
+                const analyzer = new ETFAnalyzer();
+                console.log('ETF Analyzer initialized successfully');
+                
+                // Auto-analyze SPY on load for demo
+                setTimeout(() => {
+                    analyzer.analyzeETF();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error initializing ETF Analyzer:', error);
+                alert('분석기 초기화 실패: ' + error.message);
+            }
+        });
+
+        // Fallback initialization
+        window.addEventListener('load', function() {
+            if (!window.etfAnalyzerInitialized) {
+                console.log('Fallback initialization...');
+                document.dispatchEvent(new Event('DOMContentLoaded'));
+            }
         });
     </script>
 </body>
