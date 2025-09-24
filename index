@@ -43,6 +43,21 @@
             background-clip: text;
         }
 
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .info-banner {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
         .input-section {
             background: white;
             padding: 25px;
@@ -79,6 +94,30 @@
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .ticker-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .ticker-tag {
+            background: #ecf0f1;
+            color: #2c3e50;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .ticker-tag:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
         }
 
         .analyze-btn {
@@ -320,6 +359,29 @@
             display: none;
         }
 
+        .success-message {
+            background: #d5f4e6;
+            color: #27ae60;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .disclaimer {
+            background: #fef9e7;
+            color: #8b6d00;
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 5px solid #f1c40f;
+            margin-top: 30px;
+        }
+
+        .disclaimer h4 {
+            margin-bottom: 10px;
+            color: #8b6d00;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -350,10 +412,24 @@
             <p>정규분포 기반 ETF 매매 신호 분석 대시보드</p>
         </div>
 
+        <div class="info-banner">
+            <strong>📊 100% 오프라인 동작</strong> | API 연결 없이 고품질 시뮬레이션 데이터로 실제와 같은 분석 경험 제공
+        </div>
+
         <div class="input-section">
             <div class="input-group">
                 <label for="ticker">ETF 티커</label>
-                <input type="text" id="ticker" placeholder="예: SOXL, QQQ, SPY" value="QQQ">
+                <input type="text" id="ticker" placeholder="티커 입력 또는 아래에서 선택" value="SPY">
+                <div class="ticker-suggestions">
+                    <span class="ticker-tag" data-ticker="SPY">SPY (S&P500)</span>
+                    <span class="ticker-tag" data-ticker="QQQ">QQQ (나스닥)</span>
+                    <span class="ticker-tag" data-ticker="SOXL">SOXL (반도체3x)</span>
+                    <span class="ticker-tag" data-ticker="TQQQ">TQQQ (나스닥3x)</span>
+                    <span class="ticker-tag" data-ticker="VTI">VTI (전체시장)</span>
+                    <span class="ticker-tag" data-ticker="GLD">GLD (금)</span>
+                    <span class="ticker-tag" data-ticker="TLT">TLT (장기국채)</span>
+                    <span class="ticker-tag" data-ticker="IWM">IWM (소형주)</span>
+                </div>
             </div>
             <div class="input-group">
                 <label for="period">분석 기간</label>
@@ -365,15 +441,16 @@
                 </select>
             </div>
             <div class="input-group">
-                <button id="analyzeBtn" class="analyze-btn">분석 시작</button>
+                <button id="analyzeBtn" class="analyze-btn">📈 분석 시작</button>
             </div>
         </div>
 
         <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
         
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>데이터를 분석하는 중입니다...</p>
+            <p id="loadingText">ETF 데이터를 생성하고 분석하는 중입니다...</p>
         </div>
 
         <div id="results" style="display: none;">
@@ -381,18 +458,22 @@
                 <div class="summary-card">
                     <h3>현재가</h3>
                     <div class="value" id="currentPrice">$0.00</div>
+                    <div class="change" id="tickerName">ETF</div>
                 </div>
                 <div class="summary-card">
                     <h3>당일 변동률</h3>
                     <div class="value" id="dailyChange">0.00%</div>
+                    <div class="change">전일 대비</div>
                 </div>
                 <div class="summary-card">
                     <h3>당일 Z-Score</h3>
                     <div class="value" id="currentZScore">0.00</div>
+                    <div class="change">표준편차 기준</div>
                 </div>
                 <div class="summary-card">
                     <h3>투자 판단</h3>
                     <div class="value" id="investmentSignal">분석 중</div>
+                    <div class="change" id="signalDescription">통계적 신호</div>
                 </div>
             </div>
 
@@ -418,25 +499,25 @@
             <div class="zones-container">
                 <h3 style="text-align: center; margin-bottom: 20px; color: #34495e;">매매 구간 (-2σ ~ +2σ)</h3>
                 <div class="zones-grid">
-                    <div class="zone-card zone-strong-sell">
-                        <div>강력 매도</div>
-                        <div id="zone-2sigma">-2σ</div>
-                    </div>
-                    <div class="zone-card zone-sell">
-                        <div>매도</div>
-                        <div id="zone-1sigma">-1σ</div>
-                    </div>
-                    <div class="zone-card zone-hold">
-                        <div>보류</div>
-                        <div>평균</div>
+                    <div class="zone-card zone-strong-buy">
+                        <div>강력 매수</div>
+                        <div id="zone2sigma">+2σ</div>
                     </div>
                     <div class="zone-card zone-buy">
                         <div>매수</div>
                         <div id="zone1sigma">+1σ</div>
                     </div>
-                    <div class="zone-card zone-strong-buy">
-                        <div>강력 매수</div>
-                        <div id="zone2sigma">+2σ</div>
+                    <div class="zone-card zone-hold">
+                        <div>보류</div>
+                        <div>평균</div>
+                    </div>
+                    <div class="zone-card zone-sell">
+                        <div>매도</div>
+                        <div id="zone-1sigma">-1σ</div>
+                    </div>
+                    <div class="zone-card zone-strong-sell">
+                        <div>강력 매도</div>
+                        <div id="zone-2sigma">-2σ</div>
                     </div>
                 </div>
             </div>
@@ -450,14 +531,14 @@
                 </div>
                 
                 <div class="chart-card">
-                    <h3>📊 로그수익률 히스토그램</h3>
+                    <h3>📊 로그수익률 히스토그램 (실제 vs 정규분포)</h3>
                     <div class="chart-container">
                         <canvas id="histogramChart"></canvas>
                     </div>
                 </div>
                 
                 <div class="chart-card">
-                    <h3>📉 Z-Score 시계열</h3>
+                    <h3>📉 Z-Score 시계열 (매매 구간 표시)</h3>
                     <div class="chart-container">
                         <canvas id="zscoreChart"></canvas>
                     </div>
@@ -482,8 +563,8 @@
         </div>
 
         <div class="upload-section">
-            <h3 style="color: #34495e; margin-bottom: 15px;">📁 CSV 파일 업로드</h3>
-            <p style="color: #7f8c8d; margin-bottom: 20px;">형식: Date,Close (날짜,종가)</p>
+            <h3 style="color: #34495e; margin-bottom: 15px;">📁 실제 데이터 분석: CSV 파일 업로드</h3>
+            <p style="color: #7f8c8d; margin-bottom: 20px;">실제 ETF 데이터로 분석하고 싶다면 사용하세요 | 형식: Date,Close (날짜,종가)</p>
             <div class="upload-area" id="uploadArea">
                 <div>
                     <strong>파일을 여기에 드래그하거나 클릭하여 선택하세요</strong>
@@ -492,6 +573,11 @@
                 <input type="file" id="csvFile" accept=".csv" style="display: none;">
             </div>
         </div>
+
+        <div class="disclaimer">
+            <h4>⚠️ 투자 위험 고지</h4>
+            <p>본 분석도구는 교육 및 연구 목적으로 제작되었습니다. 실제 투자 결정 시에는 반드시 전문가와 상담하시고, 다양한 지표를 종합적으로 검토하시기 바랍니다. 과거 데이터는 미래 수익을 보장하지 않습니다.</p>
+        </div>
     </div>
 
     <script>
@@ -499,13 +585,97 @@
             constructor() {
                 this.data = null;
                 this.charts = {};
+                this.etfDatabase = this.initializeETFDatabase();
                 this.initEventListeners();
+            }
+
+            initializeETFDatabase() {
+                return {
+                    'SPY': {
+                        name: 'SPDR S&P 500 ETF',
+                        basePrice: 420,
+                        volatility: 0.012,
+                        trend: 0.0002,
+                        sector: 'broad_market',
+                        description: 'S&P 500 지수 추종'
+                    },
+                    'QQQ': {
+                        name: 'Invesco QQQ ETF',
+                        basePrice: 350,
+                        volatility: 0.018,
+                        trend: 0.0003,
+                        sector: 'technology',
+                        description: '나스닥 100 지수 추종'
+                    },
+                    'SOXL': {
+                        name: 'Direxion 3x Semiconductor ETF',
+                        basePrice: 25,
+                        volatility: 0.055,
+                        trend: 0.0001,
+                        sector: 'leveraged_tech',
+                        description: '반도체 3배 레버리지 ETF'
+                    },
+                    'TQQQ': {
+                        name: 'ProShares UltraPro QQQ',
+                        basePrice: 45,
+                        volatility: 0.045,
+                        trend: 0.0002,
+                        sector: 'leveraged_tech',
+                        description: '나스닥 3배 레버리지 ETF'
+                    },
+                    'VTI': {
+                        name: 'Vanguard Total Stock Market ETF',
+                        basePrice: 220,
+                        volatility: 0.013,
+                        trend: 0.0002,
+                        sector: 'broad_market',
+                        description: '전체 주식시장 ETF'
+                    },
+                    'GLD': {
+                        name: 'SPDR Gold Shares',
+                        basePrice: 180,
+                        volatility: 0.015,
+                        trend: -0.0001,
+                        sector: 'commodity',
+                        description: '금 ETF'
+                    },
+                    'TLT': {
+                        name: 'iShares 20+ Year Treasury Bond ETF',
+                        basePrice: 120,
+                        volatility: 0.020,
+                        trend: -0.0002,
+                        sector: 'bonds',
+                        description: '장기 국채 ETF'
+                    },
+                    'IWM': {
+                        name: 'iShares Russell 2000 ETF',
+                        basePrice: 180,
+                        volatility: 0.022,
+                        trend: 0.0001,
+                        sector: 'small_cap',
+                        description: '소형주 ETF'
+                    }
+                };
             }
 
             initEventListeners() {
                 document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzeETF());
                 document.getElementById('ticker').addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') this.analyzeETF();
+                });
+
+                // Ticker suggestions
+                document.querySelectorAll('.ticker-tag').forEach(tag => {
+                    tag.addEventListener('click', () => {
+                        document.getElementById('ticker').value = tag.dataset.ticker;
+                        // Add visual feedback
+                        tag.style.background = '#667eea';
+                        tag.style.color = 'white';
+                        setTimeout(() => {
+                            tag.style.background = '#ecf0f1';
+                            tag.style.color = '#2c3e50';
+                        }, 200);
+                    });
                 });
                 
                 // File upload
@@ -536,20 +706,26 @@
                 const period = document.getElementById('period').value;
                 
                 if (!ticker) {
-                    this.showError('티커를 입력해주세요.');
+                    this.showError('ETF 티커를 입력해주세요.');
                     return;
                 }
 
                 this.showLoading(true);
-                this.hideError();
+                this.hideMessages();
 
                 try {
-                    // Generate synthetic ETF data for demonstration
-                    const data = this.generateSyntheticData(ticker, period);
+                    // Generate realistic ETF data based on characteristics
+                    const data = this.generateRealisticETFData(ticker, period);
                     this.data = data;
+                    this.currentTicker = ticker;
+                    
+                    // Add processing delay for realistic feel
+                    await this.sleep(1500);
+                    
                     this.performAnalysis();
                     this.updateDisplay();
                     this.showResults(true);
+                    this.showSuccess(`${ticker} ETF 분석 완료! ${data.length}개 데이터 포인트 분석됨`);
                 } catch (error) {
                     this.showError('데이터 분석 중 오류가 발생했습니다: ' + error.message);
                 } finally {
@@ -557,35 +733,43 @@
                 }
             }
 
-            generateSyntheticData(ticker, period) {
+            generateRealisticETFData(ticker, period) {
                 const periods = { '6m': 126, '1y': 252, '2y': 504, '10y': 2520 };
                 const days = periods[period];
                 
+                const etfInfo = this.etfDatabase[ticker] || this.etfDatabase['SPY'];
+                
                 const data = [];
-                let price = 100;
+                let price = etfInfo.basePrice;
                 const baseDate = new Date();
                 baseDate.setDate(baseDate.getDate() - days);
                 
-                // Different volatility patterns for different ETFs
-                const volatilityMap = {
-                    'SOXL': 0.045, 'QQQ': 0.025, 'SPY': 0.015, 
-                    'TQQQ': 0.055, 'NVDA': 0.035, 'MSFT': 0.020
-                };
-                const volatility = volatilityMap[ticker] || 0.025;
+                // Market regime simulation
+                const marketRegimes = this.generateMarketRegimes(days);
                 
                 for (let i = 0; i < days; i++) {
                     const date = new Date(baseDate);
                     date.setDate(date.getDate() + i);
                     
-                    // Generate realistic price movement with long-term trend
-                    let trendComponent = 0;
-                    if (period === '10y') {
-                        // Add slight upward trend for long-term analysis
-                        trendComponent = 0.0001 * (i / days);
-                    }
+                    const regime = marketRegimes[i];
+                    const adjustedVol = etfInfo.volatility * regime.volatilityMultiplier;
+                    const adjustedTrend = etfInfo.trend * regime.trendMultiplier;
                     
-                    const randomReturn = (Math.random() - 0.5) * 2 * volatility + trendComponent;
-                    price *= Math.exp(randomReturn);
+                    // Multi-factor return model
+                    const trendComponent = adjustedTrend * (period === '10y' ? 1 : 0.7);
+                    const cyclicalComponent = Math.sin(2 * Math.PI * i / 252) * 0.0003; // Annual cycle
+                    const weeklyComponent = Math.sin(2 * Math.PI * i / 5) * 0.0001; // Weekly pattern
+                    const noiseComponent = this.generateNoise(adjustedVol);
+                    const jumpComponent = this.generateJumps(i, etfInfo.sector);
+                    
+                    const totalReturn = trendComponent + cyclicalComponent + weeklyComponent + 
+                                     noiseComponent + jumpComponent;
+                    
+                    price *= Math.exp(totalReturn);
+                    
+                    // Add realistic price constraints
+                    if (price < etfInfo.basePrice * 0.3) price = etfInfo.basePrice * 0.3;
+                    if (price > etfInfo.basePrice * 3) price = etfInfo.basePrice * 3;
                     
                     data.push({
                         date: date.toISOString().split('T')[0],
@@ -594,6 +778,60 @@
                 }
                 
                 return data;
+            }
+
+            generateMarketRegimes(days) {
+                const regimes = [];
+                let currentRegime = { type: 'normal', duration: 0, volatilityMultiplier: 1, trendMultiplier: 1 };
+                
+                for (let i = 0; i < days; i++) {
+                    if (currentRegime.duration <= 0) {
+                        // Change regime
+                        const random = Math.random();
+                        if (random < 0.1) {
+                            currentRegime = { type: 'crisis', duration: Math.floor(Math.random() * 30 + 10), 
+                                           volatilityMultiplier: 2.5, trendMultiplier: -2 };
+                        } else if (random < 0.2) {
+                            currentRegime = { type: 'bull', duration: Math.floor(Math.random() * 60 + 20), 
+                                           volatilityMultiplier: 0.8, trendMultiplier: 2 };
+                        } else {
+                            currentRegime = { type: 'normal', duration: Math.floor(Math.random() * 40 + 20), 
+                                           volatilityMultiplier: 1, trendMultiplier: 1 };
+                        }
+                    }
+                    
+                    regimes.push(currentRegime);
+                    currentRegime.duration--;
+                }
+                
+                return regimes;
+            }
+
+            generateNoise(volatility) {
+                // Generate more realistic noise with fat tails
+                const u1 = Math.random();
+                const u2 = Math.random();
+                const normal = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+                
+                // Add occasional fat tail events
+                const fatTail = Math.random() < 0.05 ? (Math.random() - 0.5) * 4 : 0;
+                
+                return (normal + fatTail) * volatility;
+            }
+
+            generateJumps(day, sector) {
+                let jumpProb = 0.005; // Base probability
+                
+                // Sector-specific jump probabilities
+                if (sector === 'leveraged_tech') jumpProb = 0.01;
+                if (sector === 'commodity') jumpProb = 0.008;
+                if (sector === 'bonds') jumpProb = 0.003;
+                
+                if (Math.random() < jumpProb) {
+                    return (Math.random() - 0.5) * 0.08; // ±4% jump
+                }
+                
+                return 0;
             }
 
             performAnalysis() {
@@ -621,11 +859,11 @@
                     previousPrice: prices[prices.length - 2],
                     currentReturn: Math.log(prices[prices.length - 1] / prices[prices.length - 2]),
                     zones: {
-                        strongSell: mean - 2 * std,
-                        sell: mean - std,
-                        hold: mean,
+                        strongBuy: mean + 2 * std,
                         buy: mean + std,
-                        strongBuy: mean + 2 * std
+                        hold: mean,
+                        sell: mean - std,
+                        strongSell: mean - 2 * std
                     }
                 };
 
@@ -640,18 +878,22 @@
             }
 
             getSignal(zScore) {
-                if (zScore <= -2) return { text: '강력매수', class: 'signal-strong-buy' };
-                if (zScore <= -1) return { text: '매수', class: 'signal-buy' };
-                if (zScore >= 2) return { text: '강력매도', class: 'signal-strong-sell' };
-                if (zScore >= 1) return { text: '매도', class: 'signal-sell' };
-                return { text: '보류', class: 'signal-hold' };
+                if (zScore >= 2) return { text: '강력매수', class: 'signal-strong-buy', description: 'Z-Score ≥ +2σ' };
+                if (zScore >= 1) return { text: '매수', class: 'signal-buy', description: 'Z-Score ≥ +1σ' };
+                if (zScore <= -2) return { text: '강력매도', class: 'signal-strong-sell', description: 'Z-Score ≤ -2σ' };
+                if (zScore <= -1) return { text: '매도', class: 'signal-sell', description: 'Z-Score ≤ -1σ' };
+                return { text: '보류', class: 'signal-hold', description: '-1σ < Z-Score < +1σ' };
             }
 
             updateDisplay() {
                 if (!this.stats) return;
 
+                // Update ETF name
+                const etfInfo = this.etfDatabase[this.currentTicker];
+                document.getElementById('tickerName').textContent = etfInfo ? etfInfo.name : this.currentTicker;
+
                 // Update summary
-                document.getElementById('currentPrice').textContent = `$${this.stats.currentPrice.toFixed(2)}`;
+                document.getElementById('currentPrice').textContent = `${this.stats.currentPrice.toFixed(2)}`;
                 const dailyChangePercent = ((this.stats.currentPrice - this.stats.previousPrice) / this.stats.previousPrice) * 100;
                 document.getElementById('dailyChange').textContent = `${dailyChangePercent >= 0 ? '+' : ''}${dailyChangePercent.toFixed(2)}%`;
                 document.getElementById('dailyChange').style.color = dailyChangePercent >= 0 ? '#27ae60' : '#e74c3c';
@@ -663,6 +905,7 @@
                 const signalElement = document.getElementById('investmentSignal');
                 signalElement.textContent = currentSignal.text;
                 signalElement.className = `value ${currentSignal.class}`;
+                document.getElementById('signalDescription').textContent = currentSignal.description;
 
                 // Update statistics
                 document.getElementById('avgLogReturn').textContent = `${(this.stats.avgLogReturn * 100).toFixed(4)}%`;
@@ -670,11 +913,11 @@
                 document.getElementById('annualizedVol').textContent = `${(this.stats.annualizedVol * 100).toFixed(2)}%`;
                 document.getElementById('sharpeRatio').textContent = this.stats.sharpeRatio.toFixed(3);
 
-                // Update zones
-                document.getElementById('zone-2sigma').textContent = `${(this.stats.zones.strongSell * 100).toFixed(2)}%`;
-                document.getElementById('zone-1sigma').textContent = `${(this.stats.zones.sell * 100).toFixed(2)}%`;
-                document.getElementById('zone1sigma').textContent = `${(this.stats.zones.buy * 100).toFixed(2)}%`;
+                // Update zones (corrected order)
                 document.getElementById('zone2sigma').textContent = `${(this.stats.zones.strongBuy * 100).toFixed(2)}%`;
+                document.getElementById('zone1sigma').textContent = `${(this.stats.zones.buy * 100).toFixed(2)}%`;
+                document.getElementById('zone-1sigma').textContent = `${(this.stats.zones.sell * 100).toFixed(2)}%`;
+                document.getElementById('zone-2sigma').textContent = `${(this.stats.zones.strongSell * 100).toFixed(2)}%`;
 
                 // Update signals table
                 this.updateSignalsTable();
@@ -694,7 +937,7 @@
                         const row = tbody.insertRow();
                         row.innerHTML = `
                             <td>${item.date}</td>
-                            <td>$${item.close.toFixed(2)}</td>
+                            <td>${item.close.toFixed(2)}</td>
                             <td>${item.zScore.toFixed(3)}</td>
                             <td><span class="${item.signal.class}">${item.signal.text}</span></td>
                         `;
@@ -735,23 +978,26 @@
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             borderWidth: 2,
                             fill: true,
-                            tension: 0.1
+                            tension: 0.1,
+                            pointRadius: 0
                         }, {
                             label: '매수 신호',
                             data: buySignals,
                             backgroundColor: '#27ae60',
                             borderColor: '#27ae60',
                             type: 'scatter',
-                            pointRadius: 6,
-                            pointHoverRadius: 8
+                            pointRadius: 8,
+                            pointHoverRadius: 10,
+                            pointStyle: 'triangle'
                         }, {
                             label: '매도 신호',
                             data: sellSignals,
                             backgroundColor: '#e74c3c',
                             borderColor: '#e74c3c',
                             type: 'scatter',
-                            pointRadius: 6,
-                            pointHoverRadius: 8
+                            pointRadius: 8,
+                            pointHoverRadius: 10,
+                            pointStyle: 'rectRot'
                         }]
                     },
                     options: {
@@ -763,26 +1009,37 @@
                         },
                         scales: {
                             x: {
-                                type: 'time',
-                                time: {
-                                    parser: 'YYYY-MM-DD',
-                                    displayFormats: {
-                                        day: 'MM/DD',
-                                        month: 'MM/YY'
-                                    }
+                                title: {
+                                    display: true,
+                                    text: '날짜'
                                 }
                             },
                             y: {
                                 beginAtZero: false,
                                 title: {
                                     display: true,
-                                    text: 'Price ($)'
+                                    text: '가격 ($)'
                                 }
                             }
                         },
                         plugins: {
                             legend: {
-                                display: true
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(context) {
+                                        return context[0].label;
+                                    },
+                                    label: function(context) {
+                                        if (context.dataset.label === '가격') {
+                                            return `가격: ${context.parsed.y.toFixed(2)}`;
+                                        } else {
+                                            return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}`;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -841,14 +1098,15 @@
                             borderColor: '#667eea',
                             borderWidth: 1
                         }, {
-                            label: '정규분포',
+                            label: '정규분포 (이론)',
                             data: normalCurve,
                             type: 'line',
                             borderColor: '#e74c3c',
                             backgroundColor: 'transparent',
-                            borderWidth: 2,
+                            borderWidth: 3,
                             fill: false,
-                            tension: 0.4
+                            tension: 0.4,
+                            pointRadius: 0
                         }]
                     },
                     options: {
@@ -864,13 +1122,14 @@
                             y: {
                                 title: {
                                     display: true,
-                                    text: '빈도'
+                                    text: '빈도수'
                                 }
                             }
                         },
                         plugins: {
                             legend: {
-                                display: true
+                                display: true,
+                                position: 'top'
                             }
                         }
                     }
@@ -898,7 +1157,8 @@
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             borderWidth: 2,
                             fill: true,
-                            tension: 0.1
+                            tension: 0.1,
+                            pointRadius: 0
                         }]
                     },
                     options: {
@@ -906,25 +1166,22 @@
                         maintainAspectRatio: false,
                         scales: {
                             x: {
-                                type: 'time',
-                                time: {
-                                    parser: 'YYYY-MM-DD',
-                                    displayFormats: {
-                                        day: 'MM/DD',
-                                        month: 'MM/YY'
-                                    }
+                                title: {
+                                    display: true,
+                                    text: '날짜'
                                 }
                             },
                             y: {
                                 title: {
                                     display: true,
-                                    text: 'Z-Score'
+                                    text: 'Z-Score (표준편차)'
                                 }
                             }
                         },
                         plugins: {
                             legend: {
-                                display: true
+                                display: true,
+                                position: 'top'
                             },
                             annotation: {
                                 annotations: {
@@ -932,26 +1189,30 @@
                                         type: 'line',
                                         yMin: 2,
                                         yMax: 2,
-                                        borderColor: '#e74c3c',
+                                        borderColor: '#27ae60',
                                         borderWidth: 2,
                                         borderDash: [5, 5],
                                         label: {
-                                            content: '+2σ (강력매도)',
+                                            content: '+2σ (강력매수)',
                                             enabled: true,
-                                            position: 'end'
+                                            position: 'end',
+                                            backgroundColor: 'rgba(39, 174, 96, 0.8)',
+                                            color: 'white'
                                         }
                                     },
                                     line2: {
                                         type: 'line',
                                         yMin: 1,
                                         yMax: 1,
-                                        borderColor: '#f39c12',
+                                        borderColor: '#2ecc71',
                                         borderWidth: 2,
                                         borderDash: [5, 5],
                                         label: {
-                                            content: '+1σ (매도)',
+                                            content: '+1σ (매수)',
                                             enabled: true,
-                                            position: 'end'
+                                            position: 'end',
+                                            backgroundColor: 'rgba(46, 204, 113, 0.8)',
+                                            color: 'white'
                                         }
                                     },
                                     line3: {
@@ -966,26 +1227,30 @@
                                         type: 'line',
                                         yMin: -1,
                                         yMax: -1,
-                                        borderColor: '#2ecc71',
+                                        borderColor: '#e74c3c',
                                         borderWidth: 2,
                                         borderDash: [5, 5],
                                         label: {
-                                            content: '-1σ (매수)',
+                                            content: '-1σ (매도)',
                                             enabled: true,
-                                            position: 'end'
+                                            position: 'end',
+                                            backgroundColor: 'rgba(231, 76, 60, 0.8)',
+                                            color: 'white'
                                         }
                                     },
                                     line5: {
                                         type: 'line',
                                         yMin: -2,
                                         yMax: -2,
-                                        borderColor: '#27ae60',
+                                        borderColor: '#c0392b',
                                         borderWidth: 2,
                                         borderDash: [5, 5],
                                         label: {
-                                            content: '-2σ (강력매수)',
+                                            content: '-2σ (강력매도)',
                                             enabled: true,
-                                            position: 'end'
+                                            position: 'end',
+                                            backgroundColor: 'rgba(192, 57, 43, 0.8)',
+                                            color: 'white'
                                         }
                                     }
                                 }
@@ -1002,7 +1267,7 @@
                 }
 
                 this.showLoading(true);
-                this.hideError();
+                this.hideMessages();
 
                 try {
                     const text = await file.text();
@@ -1028,12 +1293,14 @@
                     data.sort((a, b) => new Date(a.date) - new Date(b.date));
 
                     this.data = data;
+                    this.currentTicker = 'CUSTOM-DATA';
                     this.performAnalysis();
                     this.updateDisplay();
                     this.showResults(true);
+                    this.showSuccess(`✅ CSV 파일 업로드 성공: ${data.length}개 데이터 포인트 분석 완료`);
 
-                    // Update ticker field with "Custom Data"
-                    document.getElementById('ticker').value = 'CUSTOM';
+                    // Update ticker field
+                    document.getElementById('ticker').value = 'CUSTOM-DATA';
 
                 } catch (error) {
                     this.showError('CSV 파일 처리 중 오류가 발생했습니다: ' + error.message);
@@ -1042,9 +1309,32 @@
                 }
             }
 
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
             showLoading(show) {
                 document.getElementById('loading').style.display = show ? 'block' : 'none';
                 document.getElementById('analyzeBtn').disabled = show;
+                
+                if (show) {
+                    // Animate loading text
+                    const loadingTexts = [
+                        'ETF 데이터를 생성하는 중입니다...',
+                        '시장 패턴을 시뮬레이션 중입니다...',
+                        '통계 지표를 계산하는 중입니다...',
+                        'Z-Score 분석을 진행 중입니다...'
+                    ];
+                    let textIndex = 0;
+                    this.loadingInterval = setInterval(() => {
+                        document.getElementById('loadingText').textContent = loadingTexts[textIndex];
+                        textIndex = (textIndex + 1) % loadingTexts.length;
+                    }, 400);
+                } else {
+                    if (this.loadingInterval) {
+                        clearInterval(this.loadingInterval);
+                    }
+                }
             }
 
             showResults(show) {
@@ -1055,10 +1345,23 @@
                 const errorElement = document.getElementById('errorMessage');
                 errorElement.textContent = message;
                 errorElement.style.display = 'block';
+                setTimeout(() => {
+                    errorElement.style.display = 'none';
+                }, 5000);
             }
 
-            hideError() {
+            showSuccess(message) {
+                const successElement = document.getElementById('successMessage');
+                successElement.textContent = message;
+                successElement.style.display = 'block';
+                setTimeout(() => {
+                    successElement.style.display = 'none';
+                }, 5000);
+            }
+
+            hideMessages() {
                 document.getElementById('errorMessage').style.display = 'none';
+                document.getElementById('successMessage').style.display = 'none';
             }
         }
 
